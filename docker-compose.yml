@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  mqtt:
+    image: eclipse-mosquitto:1.6
+    container_name: mosquitto
+    restart: always
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./config/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./config/mosquitto/mosquitto_passwords:/mosquitto/config/mosquitto_passwords
+      - ./config/mosquitto/acl:/mosquitto/config/acl
+      - ./data:/mosquitto/data
+    networks:
+      - backend
+
+  fetcher:
+    build: ./scripts
+    container_name: flight_fetcher
+    restart: always
+    volumes:
+      - ./scripts:/app
+      - ./data:/data
+    networks:
+      - backend
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+
+  web:
+    image: nginx:alpine
+    container_name: nginx
+    restart: always
+    ports:
+      - "8000:80"
+    volumes:
+      - ./app:/usr/share/nginx/html
+      - ./config/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+

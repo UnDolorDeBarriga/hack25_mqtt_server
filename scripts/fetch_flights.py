@@ -59,8 +59,8 @@ def get_next_flights():
         "User-Agent": "Mozilla/5.0"
     }
     times_check = []
-    for offset in range(1):
-        i=9
+    for offset in range(3):
+        i=2
         index = (i + offset) % len(times)
         times_check.append(times[index])
 
@@ -135,7 +135,7 @@ def update_changes(client, new_flights: dict, old_flights: dict):
         if old_flights.get(flight_id) != flight_data:
             topic = f"flights/{flight_id}"
             payload = json.dumps(flight_data, ensure_ascii=False)  # Asegúrate de convertir a JSON
-            client.publish(topic, payload, retain=True)
+            client.publish(topic, payload, retain=(payload!=None))
 
 def create_changes_dict(old_flights: dict, new_flights: dict):
     changes = {}
@@ -167,6 +167,7 @@ def create_changes_dict(old_flights: dict, new_flights: dict):
         if flight_id not in old_flights:
             changes[flight_id] = new_data
 
+    print(f"Changes: {changes.keys()}")
     return changes
 
 def publish_flights_mqtt(client, flights: dict, broker_host="localhost", broker_port=1883, topic_prefix="flights/"):
@@ -181,7 +182,14 @@ def publish_flights_mqtt(client, flights: dict, broker_host="localhost", broker_
     for flight_id, flight_data in flights.items():
         topic = f"{topic_prefix}{flight_id}"
         payload = json.dumps(flight_data, ensure_ascii=False)
-        client.publish(topic, payload, retain=True)
+
+        if flight_data is None:
+            client.publish(topic, payload="", retain=True)  # ← Elimina mensaje retenido
+            print(f"Cleared topic {topic}")
+        else:
+            payload = json.dumps(flight_data, ensure_ascii=False)
+            client.publish(topic, payload, retain=True)
+            print(f"Published to {topic}: {payload}")
 
 def publish_obj_mqtt(client, data: list, broker_host="localhost", broker_port=1883, topic_prefix="flights/"):
     """
@@ -193,8 +201,13 @@ def publish_obj_mqtt(client, data: list, broker_host="localhost", broker_port=18
     :param topic_prefix: Prefix for MQTT topics
     """
     topic = f"{topic_prefix}"
-    payload = json.dumps(data, ensure_ascii=False)
-    client.publish(topic, payload, retain=True)
+    if data is None:
+        client.publish(topic, payload="", retain=True)  # ← Elimina mensaje retenido
+        print(f"Cleared topic {topic}")
+    else:
+        payload = json.dumps(data, ensure_ascii=False)
+        client.publish(topic, payload, retain=True)
+        print(f"Published to {topic}: {payload}")
 
 def connect(broker_host, broker_port):
     client = mqtt.Client()
